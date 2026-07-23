@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
 import {
   Link,
   Link2,
@@ -11,20 +12,17 @@ import {
   Check,
   ExternalLink,
   Search,
-  Database,
+  DatabaseZap,
 } from "lucide-react";
 
-// Safely access env variables (will be undefined in this web preview, but work locally in Vite)
-const getEnvVar = (name) => {
-  try {
-    return import.meta.env[name];
-  } catch (e) {
-    return null;
-  }
-};
 
-const supabaseUrl = getEnvVar("VITE_SUPABASE_URL");
-const supabaseKey = getEnvVar("VITE_SUPABASE_ANON_KEY");
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Initialize Supabase client once at module level
+const supabaseClient =
+  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+
 
 // Generate a local session ID so users can see their own links
 const getSessionId = () => {
@@ -56,8 +54,7 @@ const isValidUrl = (string) => {
 };
 
 export default function App() {
-  const [supabase, setSupabase] = useState(null);
-  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
+  const [supabase] = useState(supabaseClient);
 
   // App State
   const [urls, setUrls] = useState([]);
@@ -80,35 +77,12 @@ export default function App() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [redirectError, setRedirectError] = useState("");
 
-  // Dynamically load Supabase to avoid compilation errors in the preview environment
-  useEffect(() => {
-    if (window.supabase) {
-      setIsScriptLoaded(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
-    script.async = true;
-    script.onload = () => setIsScriptLoaded(true);
-    document.body.appendChild(script);
-  }, []);
 
-  // Initialize Supabase using ENV variables once the script is loaded
-  useEffect(() => {
-    if (isScriptLoaded && supabaseUrl && supabaseKey) {
-      try {
-        const client = window.supabase.createClient(supabaseUrl, supabaseKey);
-        setSupabase(client);
-      } catch (err) {
-        console.error("Failed to initialize Supabase client", err);
-      }
-    }
-  }, [isScriptLoaded]);
-
-  // Fetch URLs when component mounts or tab changes
+  // Fetch URLs when supabase client is ready or tab changes
   useEffect(() => {
     if (supabase) fetchMyLinks();
   }, [activeTab, supabase]);
+
 
   // Handle Redirection if a short code is in the URL path (e.g. localhost:5173/aB3x9)
   useEffect(() => {
@@ -287,7 +261,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6 font-sans">
         <div className="bg-white p-8 rounded-xl shadow-xl max-w-lg w-full text-center border border-gray-200">
-          <Database className="w-16 h-16 mx-auto text-emerald-600 mb-4" />
+          <DatabaseZap className="w-16 h-16 mx-auto text-emerald-600 mb-4" />
           <h1 className="text-2xl font-bold text-gray-800 mb-2">
             Local Development Setup
           </h1>
