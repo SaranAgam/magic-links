@@ -13,6 +13,13 @@ import {
   ExternalLink,
   Search,
   DatabaseZap,
+  TrendingUp,
+  RefreshCw,
+  Share2,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  BarChart2,
 } from "lucide-react";
 
 
@@ -53,6 +60,53 @@ const isValidUrl = (string) => {
   }
 };
 
+const formatReferrer = (referrer) => {
+  if (!referrer || referrer === "direct" || referrer.trim() === "") return "Direct";
+  try {
+    const url = new URL(referrer);
+    const host = url.hostname.replace("www.", "");
+    const map = {
+      "linkedin.com": "LinkedIn",
+      "lnkd.in": "LinkedIn",
+      "twitter.com": "Twitter / X",
+      "x.com": "Twitter / X",
+      "t.co": "Twitter / X",
+      "facebook.com": "Facebook",
+      "fb.me": "Facebook",
+      "instagram.com": "Instagram",
+      "google.com": "Google",
+      "google.co.in": "Google",
+      "github.com": "GitHub",
+      "reddit.com": "Reddit",
+      "whatsapp.com": "WhatsApp",
+      "wa.me": "WhatsApp",
+      "telegram.org": "Telegram",
+      "t.me": "Telegram",
+      "youtube.com": "YouTube",
+    };
+    return map[host] || host;
+  } catch {
+    return referrer.length > 40 ? referrer.slice(0, 40) + "…" : referrer;
+  }
+};
+
+const getReferrerColor = (label) => {
+  const colors = {
+    "LinkedIn": "bg-blue-600",
+    "Twitter / X": "bg-sky-500",
+    "Facebook": "bg-indigo-600",
+    "Instagram": "bg-pink-500",
+    "Google": "bg-red-500",
+    "GitHub": "bg-gray-800",
+    "Reddit": "bg-orange-500",
+    "WhatsApp": "bg-green-500",
+    "Telegram": "bg-cyan-500",
+    "YouTube": "bg-red-600",
+    "Direct": "bg-emerald-500",
+  };
+  return colors[label] || "bg-purple-500";
+};
+
 export default function App() {
   const [supabase] = useState(supabaseClient);
 
@@ -76,6 +130,11 @@ export default function App() {
 
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [redirectError, setRedirectError] = useState("");
+
+  // Analytics State
+  const [expandedLink, setExpandedLink] = useState(null);
+  const [clickEvents, setClickEvents] = useState({});   // shortCode -> events[]
+  const [loadingEvents, setLoadingEvents] = useState({}); // shortCode -> bool
 
 
   // Fetch URLs when supabase client is ready or tab changes
@@ -102,10 +161,17 @@ export default function App() {
           if (error || !data) {
             setRedirectError("Short link not found.");
           } else {
+            // Increment click counter
             await supabase
               .from("urls")
               .update({ clicks: data.clicks + 1 })
               .eq("short_code", path);
+            // Log detailed click event with referrer
+            await supabase.from("click_events").insert([{
+              short_code: path,
+              referrer: document.referrer || "direct",
+              user_agent: navigator.userAgent,
+            }]).then(() => {}).catch(() => {});
             window.location.href = data.original_url;
           }
         } catch (err) {
@@ -129,6 +195,39 @@ export default function App() {
       setUrls(data || []);
     } catch (err) {
       console.error("Error fetching URLs from Supabase:", err.message);
+    }
+  };
+
+  // Log a click event to click_events table
+  const logClickEvent = async (shortCode) => {
+    if (!supabase) return;
+    try {
+      await supabase.from("click_events").insert([{
+        short_code: shortCode,
+        referrer: document.referrer || "direct",
+        user_agent: navigator.userAgent,
+      }]);
+    } catch (err) {
+      console.error("Failed to log click event:", err);
+    }
+  };
+
+  // Fetch per-link click events for analytics
+  const fetchClickEvents = async (shortCode) => {
+    if (!supabase) return;
+    setLoadingEvents((prev) => ({ ...prev, [shortCode]: true }));
+    try {
+      const { data } = await supabase
+        .from("click_events")
+        .select("*")
+        .eq("short_code", shortCode)
+        .order("clicked_at", { ascending: false })
+        .limit(200);
+      setClickEvents((prev) => ({ ...prev, [shortCode]: data || [] }));
+    } catch (err) {
+      console.error("Error fetching click events:", err);
+    } finally {
+      setLoadingEvents((prev) => ({ ...prev, [shortCode]: false }));
     }
   };
 
@@ -213,6 +312,12 @@ export default function App() {
           .from("urls")
           .update({ clicks: currentData.clicks + 1 })
           .eq("short_code", shortCode);
+        // Log click event for analytics
+        await logClickEvent(shortCode);
+        // Refresh events if this link is currently expanded
+        if (expandedLink === shortCode) {
+          fetchClickEvents(shortCode);
+        }
         fetchMyLinks();
       }
       window.open(originalUrl, "_blank", "noopener,noreferrer");
@@ -477,101 +582,275 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB: DASHBOARD (MY LINKS) */}
+        {/* TAB: ANALYTICS DASHBOARD */}
         {activeTab === "dashboard" && (
-          <div className="animate-in fade-in duration-300 max-w-4xl mx-auto">
+          <div className="animate-in fade-in duration-300 max-w-5xl mx-auto">
+            {/* Header */}
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-3xl font-bold text-gray-900">
-                My Links (Supabase DB)
-              </h2>
-              <div className="text-sm bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-medium">
-                {urls.length} Links Total
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h2>
+                <p className="text-gray-500 mt-1 text-sm">Track clicks and traffic sources for all your short links</p>
               </div>
+              <button
+                onClick={() => {
+                  fetchMyLinks();
+                  if (expandedLink) fetchClickEvents(expandedLink);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors font-medium text-sm border border-emerald-200"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </button>
             </div>
 
+            {/* Summary Cards */}
+            {urls.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
+                  <div className="bg-emerald-100 p-3 rounded-xl">
+                    <Link2 className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Links</p>
+                    <p className="text-3xl font-bold text-gray-900">{urls.length}</p>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
+                  <div className="bg-blue-100 p-3 rounded-xl">
+                    <MousePointerClick className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Clicks</p>
+                    <p className="text-3xl font-bold text-gray-900">
+                      {urls.reduce((sum, u) => sum + (u.clicks || 0), 0)}
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
+                  <div className="bg-amber-100 p-3 rounded-xl">
+                    <TrendingUp className="w-6 h-6 text-amber-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Top Link</p>
+                    {(() => {
+                      const top = urls.reduce((max, u) => (u.clicks || 0) > (max?.clicks || 0) ? u : max, null);
+                      return top
+                        ? <p className="text-lg font-bold text-gray-900 truncate">/{top.short_code} <span className="text-sm font-normal text-gray-500">({top.clicks} clicks)</span></p>
+                        : <p className="text-gray-400">—</p>;
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Links Table */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               {urls.length === 0 ? (
                 <div className="p-12 text-center text-gray-500">
-                  <Link2 className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg">You haven't shortened any URLs yet.</p>
+                  <BarChart2 className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg font-medium">No links yet</p>
+                  <p className="text-sm text-gray-400 mt-1">Shorten a URL to start tracking analytics</p>
                   <button
                     onClick={() => setActiveTab("shorten")}
-                    className="mt-4 text-emerald-600 font-medium hover:underline"
+                    className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
                   >
                     Shorten your first link
                   </button>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
-                        <th className="p-4 font-semibold">Short Link</th>
-                        <th className="p-4 font-semibold">Original URL</th>
-                        <th className="p-4 font-semibold text-center">
-                          Clicks
-                        </th>
-                        <th className="p-4 font-semibold text-right">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {urls.map((u) => (
-                        <tr
-                          key={u.short_code}
-                          className="hover:bg-gray-50 transition-colors"
+                <div>
+                  {/* Table header */}
+                  <div className="hidden sm:grid grid-cols-12 gap-2 px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <div className="col-span-2">Short Link</div>
+                    <div className="col-span-4">Destination</div>
+                    <div className="col-span-3">Performance</div>
+                    <div className="col-span-2 text-center">Clicks</div>
+                    <div className="col-span-1"></div>
+                  </div>
+
+                  {urls.map((u) => {
+                    const maxClicks = Math.max(...urls.map((x) => x.clicks || 0), 1);
+                    const pct = Math.round(((u.clicks || 0) / maxClicks) * 100);
+                    const isExpanded = expandedLink === u.short_code;
+                    const events = clickEvents[u.short_code] || [];
+                    const isLoading = loadingEvents[u.short_code];
+
+                    // Aggregate referrers
+                    const referrerMap = {};
+                    events.forEach((ev) => {
+                      const label = formatReferrer(ev.referrer);
+                      referrerMap[label] = (referrerMap[label] || 0) + 1;
+                    });
+                    const referrers = Object.entries(referrerMap).sort((a, b) => b[1] - a[1]);
+
+                    return (
+                      <div key={u.short_code} className="border-b border-gray-100 last:border-0">
+                        {/* Main clickable row */}
+                        <div
+                          className="grid grid-cols-12 gap-2 px-5 py-4 hover:bg-gray-50 transition-colors cursor-pointer items-center"
+                          onClick={() => {
+                            if (isExpanded) {
+                              setExpandedLink(null);
+                            } else {
+                              setExpandedLink(u.short_code);
+                              if (!clickEvents[u.short_code]) fetchClickEvents(u.short_code);
+                            }
+                          }}
                         >
-                          <td className="p-4">
-                            <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
+                          <div className="col-span-2">
+                            <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-sm font-mono">
                               /{u.short_code}
                             </span>
-                          </td>
-                          <td className="p-4">
-                            <p
-                              className="w-64 sm:w-96 truncate text-gray-600 text-sm"
-                              title={u.original_url}
-                            >
+                          </div>
+                          <div className="col-span-4">
+                            <p className="text-gray-700 text-sm truncate" title={u.original_url}>
                               {u.original_url}
                             </p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              {new Date(u.created_at).toLocaleDateString()}
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              Created {new Date(u.created_at).toLocaleDateString()}
                             </p>
-                          </td>
-                          <td className="p-4 text-center">
-                            <span className="inline-flex items-center gap-1 font-bold text-gray-700">
-                              <MousePointerClick className="w-4 h-4 text-gray-400" />
-                              {u.clicks}
+                          </div>
+                          <div className="col-span-3 pr-4">
+                            <div className="w-full bg-gray-100 rounded-full h-2">
+                              <div
+                                className="bg-emerald-500 h-2 rounded-full transition-all duration-700"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div className="col-span-2 text-center">
+                            <span className="inline-flex items-center gap-1 font-bold text-gray-800 text-sm">
+                              <MousePointerClick className="w-4 h-4 text-emerald-500" />
+                              {u.clicks || 0}
                             </span>
-                          </td>
-                          <td className="p-4 text-right flex justify-end gap-2">
-                            <button
-                              onClick={() =>
-                                handleCopy(
-                                  `${window.location.origin}/${u.short_code}`,
-                                )
-                              }
-                              className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
-                              title="Copy"
-                            >
-                              <Copy className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() =>
-                                simulateRedirect(u.short_code, u.original_url)
-                              }
-                              className="p-2 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-100 rounded transition-colors"
-                              title="Visit Link (Tests Redirect & Counter)"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </div>
+                          <div className="col-span-1 flex justify-end">
+                            {isExpanded
+                              ? <ChevronUp className="w-4 h-4 text-gray-400" />
+                              : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                          </div>
+                        </div>
+
+                        {/* Expanded Analytics Panel */}
+                        {isExpanded && (
+                          <div className="bg-gradient-to-br from-gray-50 to-slate-50 border-t border-gray-100 px-5 py-5">
+                            {/* Quick actions */}
+                            <div className="flex gap-2 mb-5">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleCopy(`${window.location.origin}/${u.short_code}`); }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                              >
+                                <Copy className="w-3.5 h-3.5" /> Copy Link
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); simulateRedirect(u.short_code, u.original_url); }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" /> Test Link
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); fetchClickEvents(u.short_code); }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors ml-auto"
+                              >
+                                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} /> Refresh Stats
+                              </button>
+                            </div>
+
+                            {isLoading ? (
+                              <div className="flex items-center justify-center py-8 gap-3 text-gray-400">
+                                <RefreshCw className="w-5 h-5 animate-spin" />
+                                <span className="text-sm">Loading analytics...</span>
+                              </div>
+                            ) : events.length === 0 ? (
+                              <div className="text-center py-8">
+                                <Share2 className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+                                <p className="text-gray-500 font-medium text-sm">No clicks tracked yet</p>
+                                <p className="text-gray-400 text-xs mt-1">Share this link — clicks will appear here automatically</p>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Traffic Sources */}
+                                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                                  <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                                    <Share2 className="w-4 h-4 text-gray-400" />
+                                    Traffic Sources
+                                    <span className="ml-auto text-xs font-normal text-gray-400">{events.length} total</span>
+                                  </h4>
+                                  <div className="space-y-3">
+                                    {referrers.slice(0, 6).map(([label, count]) => (
+                                      <div key={label}>
+                                        <div className="flex justify-between items-center text-xs mb-1.5">
+                                          <div className="flex items-center gap-2">
+                                            <span className={`w-2 h-2 rounded-full ${getReferrerColor(label)}`} />
+                                            <span className="text-gray-700 font-medium">{label}</span>
+                                          </div>
+                                          <span className="text-gray-500">{count} click{count !== 1 ? "s" : ""} ({Math.round((count / events.length) * 100)}%)</span>
+                                        </div>
+                                        <div className="w-full bg-gray-100 rounded-full h-1.5">
+                                          <div
+                                            className={`h-1.5 rounded-full transition-all duration-500 ${getReferrerColor(label)}`}
+                                            style={{ width: `${(count / events.length) * 100}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Recent Clicks */}
+                                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                                  <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                                    <Clock className="w-4 h-4 text-gray-400" />
+                                    Recent Clicks
+                                    <span className="ml-auto text-xs font-normal text-gray-400">latest {Math.min(events.length, 8)}</span>
+                                  </h4>
+                                  <div className="space-y-2.5">
+                                    {events.slice(0, 8).map((ev, idx) => {
+                                      const label = formatReferrer(ev.referrer);
+                                      return (
+                                        <div key={ev.id || idx} className="flex items-center justify-between gap-2">
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            <span className={`flex-shrink-0 w-2 h-2 rounded-full ${getReferrerColor(label)}`} />
+                                            <span className="text-xs text-gray-500 truncate">
+                                              {new Date(ev.clicked_at).toLocaleString("en-IN", {
+                                                month: "short", day: "numeric",
+                                                hour: "2-digit", minute: "2-digit"
+                                              })}
+                                            </span>
+                                          </div>
+                                          <span className={`flex-shrink-0 text-xs font-semibold text-white px-2 py-0.5 rounded-full ${getReferrerColor(label)}`}>
+                                            {label}
+                                          </span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
+            </div>
+
+            {/* Setup Note */}
+            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm">
+              <p className="font-semibold text-amber-800 mb-1">📋 Supabase Setup Required for Analytics</p>
+              <p className="text-amber-700">Run this SQL in your Supabase SQL Editor to enable detailed click tracking:</p>
+              <pre className="mt-2 text-xs bg-white border border-amber-100 rounded-lg p-3 overflow-x-auto text-gray-700">{`CREATE TABLE IF NOT EXISTS click_events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  short_code TEXT NOT NULL,
+  clicked_at TIMESTAMPTZ DEFAULT NOW(),
+  referrer TEXT,
+  user_agent TEXT
+);
+ALTER TABLE click_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow insert" ON click_events FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow select" ON click_events FOR SELECT USING (true);`}</pre>
             </div>
           </div>
         )}
