@@ -429,47 +429,49 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800 flex flex-col">
       {/* Navigation Bar */}
-      <nav className="bg-white shadow-sm px-6 py-4 flex justify-between items-center relative z-10">
-        <div
-          className="flex items-center gap-2 text-2xl font-bold text-emerald-600 cursor-pointer"
-          onClick={() => setActiveTab("shorten")}
-        >
-          <Link2 className="w-8 h-8" />
-          ShortUrl
-          <span className="text-gray-800 text-lg ml-1 font-medium">Clone</span>
-        </div>
-        <div className="flex gap-4">
-          <button
+      <nav className="bg-white shadow-sm px-4 py-3 relative z-10">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+          <div
+            className="flex items-center gap-2 text-xl font-bold text-emerald-600 cursor-pointer"
             onClick={() => setActiveTab("shorten")}
-            className={`font-medium px-3 py-1 rounded-md transition-colors ${activeTab === "shorten" ? "text-emerald-600 bg-emerald-50" : "text-gray-600 hover:text-emerald-600"}`}
           >
-            Shorten
-          </button>
-          <button
-            onClick={() => setActiveTab("dashboard")}
-            className={`font-medium px-3 py-1 rounded-md transition-colors ${activeTab === "dashboard" ? "text-emerald-600 bg-emerald-50" : "text-gray-600 hover:text-emerald-600"}`}
-          >
-            My Links
-          </button>
-          <button
-            onClick={() => setActiveTab("unshorten")}
-            className={`font-medium px-3 py-1 rounded-md transition-colors ${activeTab === "unshorten" ? "text-emerald-600 bg-emerald-50" : "text-gray-600 hover:text-emerald-600"}`}
-          >
-            Unshorten
-          </button>
+            <Link2 className="w-6 h-6" />
+            ShortUrl
+            <span className="text-gray-800 text-base ml-1 font-medium">Clone</span>
+          </div>
+          <div className="flex gap-1 sm:gap-3">
+            <button
+              onClick={() => setActiveTab("shorten")}
+              className={`flex-1 sm:flex-none text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${activeTab === "shorten" ? "text-emerald-600 bg-emerald-50" : "text-gray-600 hover:text-emerald-600"}`}
+            >
+              Shorten
+            </button>
+            <button
+              onClick={() => setActiveTab("dashboard")}
+              className={`flex-1 sm:flex-none text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${activeTab === "dashboard" ? "text-emerald-600 bg-emerald-50" : "text-gray-600 hover:text-emerald-600"}`}
+            >
+              My Links
+            </button>
+            <button
+              onClick={() => setActiveTab("unshorten")}
+              className={`flex-1 sm:flex-none text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${activeTab === "unshorten" ? "text-emerald-600 bg-emerald-50" : "text-gray-600 hover:text-emerald-600"}`}
+            >
+              Unshorten
+            </button>
+          </div>
         </div>
       </nav>
 
       {/* Main Content Area */}
-      <main className="max-w-5xl mx-auto pt-12 pb-24 px-6 w-full flex-1">
+      <main className="max-w-5xl mx-auto pt-8 sm:pt-12 pb-24 px-4 sm:px-6 w-full flex-1">
         {/* TAB: SHORTEN (HOME) */}
         {activeTab === "shorten" && (
           <div className="animate-in fade-in duration-300">
-            <div className="text-center mb-10">
-              <h1 className="text-4xl font-extrabold text-gray-900 mb-4">
+            <div className="text-center mb-8 sm:mb-10">
+              <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 mb-3 sm:mb-4 leading-tight">
                 Paste the URL to be shortened
               </h1>
-              <p className="text-lg text-gray-600">
+              <p className="text-base sm:text-lg text-gray-600">
                 ShortUrl is a free tool to shorten URLs and generate short links
               </p>
             </div>
@@ -505,41 +507,44 @@ export default function App() {
 
             {/* Result Card */}
             {newShortUrl && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-8 max-w-3xl mx-auto mb-16 text-center animate-in slide-in-from-top-4">
-                <h3 className="text-2xl font-bold text-gray-800 mb-2">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 sm:p-8 max-w-3xl mx-auto mb-10 sm:mb-16 text-center animate-in slide-in-from-top-4">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
                   Your shortened URL
                 </h3>
-                <p className="text-gray-500 mb-6 truncate max-w-xl mx-auto">
+                <p className="text-gray-500 mb-5 truncate max-w-xl mx-auto text-sm sm:text-base">
                   {newShortUrl.originalUrl}
                 </p>
 
-                <div className="flex items-center justify-center gap-3">
-                  <div className="bg-white border-2 border-gray-200 text-xl font-bold text-emerald-600 px-6 py-3 rounded-lg w-full max-w-md">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
+                  <div className="bg-white border-2 border-gray-200 text-base sm:text-xl font-bold text-emerald-600 px-4 sm:px-6 py-3 rounded-lg w-full break-all text-left sm:text-center">
                     {newShortUrl.fullShortUrl}
                   </div>
-                  <button
-                    onClick={() => handleCopy(newShortUrl.fullShortUrl)}
-                    className="bg-gray-800 hover:bg-gray-900 text-white p-4 rounded-lg flex items-center justify-center transition-colors"
-                    title="Copy to clipboard"
-                  >
-                    {copied ? (
-                      <Check className="w-5 h-5 text-emerald-400" />
-                    ) : (
-                      <Copy className="w-5 h-5" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() =>
-                      simulateRedirect(
-                        newShortUrl.shortCode,
-                        newShortUrl.originalUrl,
-                      )
-                    }
-                    className="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 p-4 rounded-lg flex items-center justify-center transition-colors"
-                    title="Test Link"
-                  >
-                    <ExternalLink className="w-5 h-5" />
-                  </button>
+                  <div className="flex gap-2 justify-center">
+                    <button
+                      onClick={() => handleCopy(newShortUrl.fullShortUrl)}
+                      className="flex-1 sm:flex-none bg-gray-800 hover:bg-gray-900 text-white p-3 sm:p-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                      title="Copy to clipboard"
+                    >
+                      {copied ? (
+                        <><Check className="w-5 h-5 text-emerald-400" /><span className="sm:hidden text-sm">Copied!</span></>
+                      ) : (
+                        <><Copy className="w-5 h-5" /><span className="sm:hidden text-sm">Copy</span></>
+                      )}
+                    </button>
+                    <button
+                      onClick={() =>
+                        simulateRedirect(
+                          newShortUrl.shortCode,
+                          newShortUrl.originalUrl,
+                        )
+                      }
+                      className="flex-1 sm:flex-none bg-emerald-100 hover:bg-emerald-200 text-emerald-700 p-3 sm:p-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                      title="Test Link"
+                    >
+                      <ExternalLink className="w-5 h-5" />
+                      <span className="sm:hidden text-sm">Test</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -685,9 +690,9 @@ export default function App() {
 
                     return (
                       <div key={u.short_code} className="border-b border-gray-100 last:border-0">
-                        {/* Main clickable row */}
+                        {/* Main clickable row — mobile: 3 cols, sm+: 12 cols */}
                         <div
-                          className="grid grid-cols-12 gap-2 px-5 py-4 hover:bg-gray-50 transition-colors cursor-pointer items-center"
+                          className="flex sm:grid sm:grid-cols-12 gap-2 px-4 sm:px-5 py-4 hover:bg-gray-50 transition-colors cursor-pointer items-center"
                           onClick={() => {
                             if (isExpanded) {
                               setExpandedLink(null);
@@ -697,12 +702,14 @@ export default function App() {
                             }
                           }}
                         >
-                          <div className="col-span-2">
-                            <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-sm font-mono">
+                          {/* Short code */}
+                          <div className="flex-shrink-0 sm:col-span-2">
+                            <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-xs sm:text-sm font-mono">
                               /{u.short_code}
                             </span>
                           </div>
-                          <div className="col-span-4">
+                          {/* Destination — hidden on mobile, shown sm+ */}
+                          <div className="hidden sm:block sm:col-span-4">
                             <p className="text-gray-700 text-sm truncate" title={u.original_url}>
                               {u.original_url}
                             </p>
@@ -710,7 +717,13 @@ export default function App() {
                               Created {new Date(u.created_at).toLocaleDateString()}
                             </p>
                           </div>
-                          <div className="col-span-3 pr-4">
+                          {/* URL shown on mobile only */}
+                          <div className="flex-1 sm:hidden min-w-0 px-2">
+                            <p className="text-gray-700 text-xs truncate">{u.original_url}</p>
+                            <p className="text-xs text-gray-400">{new Date(u.created_at).toLocaleDateString()}</p>
+                          </div>
+                          {/* Performance bar — sm+ only */}
+                          <div className="hidden sm:block sm:col-span-3 pr-4">
                             <div className="w-full bg-gray-100 rounded-full h-2">
                               <div
                                 className="bg-emerald-500 h-2 rounded-full transition-all duration-700"
@@ -718,13 +731,15 @@ export default function App() {
                               />
                             </div>
                           </div>
-                          <div className="col-span-2 text-center">
+                          {/* Clicks */}
+                          <div className="flex-shrink-0 sm:col-span-2 sm:text-center">
                             <span className="inline-flex items-center gap-1 font-bold text-gray-800 text-sm">
                               <MousePointerClick className="w-4 h-4 text-emerald-500" />
                               {u.clicks || 0}
                             </span>
                           </div>
-                          <div className="col-span-1 flex justify-end">
+                          {/* Chevron */}
+                          <div className="flex-shrink-0 sm:col-span-1 flex justify-end">
                             {isExpanded
                               ? <ChevronUp className="w-4 h-4 text-gray-400" />
                               : <ChevronDown className="w-4 h-4 text-gray-400" />}
@@ -735,7 +750,7 @@ export default function App() {
                         {isExpanded && (
                           <div className="bg-gradient-to-br from-gray-50 to-slate-50 border-t border-gray-100 px-5 py-5">
                             {/* Quick actions */}
-                            <div className="flex gap-2 mb-5">
+                            <div className="flex flex-wrap gap-2 mb-5">
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleCopy(`${window.location.origin}/${u.short_code}`); }}
                                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
