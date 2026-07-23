@@ -967,7 +967,7 @@ CREATE POLICY "Allow select" ON click_events FOR SELECT USING (true);`}</pre>
 
       {/* Footer */}
       <footer className="text-center py-8 text-gray-400 text-sm border-t border-gray-200 mt-auto bg-white flex flex-col items-center justify-center gap-2">
-        <p>Thoughtfully crafted by Agam Saran ✨</p>
+        <p>Thoughtfully crafted by Agam Saran ✨| Powered by React & Supabase</p>
       </footer>
     </div>
   );
