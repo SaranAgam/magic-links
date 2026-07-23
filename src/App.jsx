@@ -437,7 +437,6 @@ export default function App() {
           >
             <Link2 className="w-6 h-6" />
             ShortUrl
-            <span className="text-gray-800 text-base ml-1 font-medium">Clone</span>
           </div>
           <div className="flex gap-1 sm:gap-3">
             <button
@@ -968,7 +967,7 @@ CREATE POLICY "Allow select" ON click_events FOR SELECT USING (true);`}</pre>
 
       {/* Footer */}
       <footer className="text-center py-8 text-gray-400 text-sm border-t border-gray-200 mt-auto bg-white flex flex-col items-center justify-center gap-2">
-        <p>© 2026 ShortUrl Clone. Powered by React & Supabase.</p>
+        <p>Thoughtfully crafted by Agam Saran ✨</p>
       </footer>
     </div>
   );
