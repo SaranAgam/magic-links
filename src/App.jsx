@@ -121,12 +121,9 @@ export default function App() {
   const [newShortUrl, setNewShortUrl] = useState(null);
   const [copied, setCopied] = useState(false);
 
-  // Unshorten State
-  const [lookupCode, setLookupCode] = useState("");
-  const [lookupResult, setLookupResult] = useState(null);
-  const [lookupError, setLookupError] = useState("");
 
-  const [activeTab, setActiveTab] = useState("shorten"); // 'shorten' | 'dashboard' | 'unshorten'
+
+  const [activeTab, setActiveTab] = useState("shorten"); // 'shorten' | 'dashboard'
 
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [redirectError, setRedirectError] = useState("");
@@ -326,40 +323,7 @@ export default function App() {
     }
   };
 
-  const handleLookup = async (e) => {
-    e.preventDefault();
-    setLookupError("");
-    setLookupResult(null);
 
-    if (!supabase) {
-      setLookupError("Database connection not established.");
-      return;
-    }
-
-    if (!lookupCode) return;
-
-    let codeToLookUp = lookupCode.trim();
-    if (codeToLookUp.includes("/")) {
-      const parts = codeToLookUp.split("/");
-      codeToLookUp = parts[parts.length - 1];
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from("urls")
-        .select("*")
-        .eq("short_code", codeToLookUp)
-        .single();
-
-      if (error || !data) {
-        setLookupError("This short URL does not exist in our database.");
-      } else {
-        setLookupResult(data);
-      }
-    } catch (err) {
-      setLookupError("Error looking up URL.");
-    }
-  };
 
   // If keys are missing in the .env file, show a helpful warning screen
   if (!supabaseUrl || !supabaseKey) {
@@ -451,12 +415,7 @@ export default function App() {
             >
               My Links
             </button>
-            <button
-              onClick={() => setActiveTab("unshorten")}
-              className={`flex-1 sm:flex-none text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${activeTab === "unshorten" ? "text-emerald-600 bg-emerald-50" : "text-gray-600 hover:text-emerald-600"}`}
-            >
-              Unshorten
-            </button>
+
           </div>
         </div>
       </nav>
@@ -586,20 +545,16 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB: ANALYTICS DASHBOARD */}
+                {/* TAB: MY LINKS */}
         {activeTab === "dashboard" && (
           <div className="animate-in fade-in duration-300 max-w-5xl mx-auto">
-            {/* Header */}
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h2 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h2>
-                <p className="text-gray-500 mt-1 text-sm">Track clicks and traffic sources for all your short links</p>
+                <h2 className="text-3xl font-bold text-gray-900">My Links</h2>
+                <p className="text-gray-500 mt-1 text-sm">View all your shortened links</p>
               </div>
               <button
-                onClick={() => {
-                  fetchMyLinks();
-                  if (expandedLink) fetchClickEvents(expandedLink);
-                }}
+                onClick={() => fetchMyLinks()}
                 className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors font-medium text-sm border border-emerald-200"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -607,53 +562,12 @@ export default function App() {
               </button>
             </div>
 
-            {/* Summary Cards */}
-            {urls.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
-                  <div className="bg-emerald-100 p-3 rounded-xl">
-                    <Link2 className="w-6 h-6 text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Links</p>
-                    <p className="text-3xl font-bold text-gray-900">{urls.length}</p>
-                  </div>
-                </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
-                  <div className="bg-blue-100 p-3 rounded-xl">
-                    <MousePointerClick className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Clicks</p>
-                    <p className="text-3xl font-bold text-gray-900">
-                      {urls.reduce((sum, u) => sum + (u.clicks || 0), 0)}
-                    </p>
-                  </div>
-                </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex items-center gap-4">
-                  <div className="bg-amber-100 p-3 rounded-xl">
-                    <TrendingUp className="w-6 h-6 text-amber-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Top Link</p>
-                    {(() => {
-                      const top = urls.reduce((max, u) => (u.clicks || 0) > (max?.clicks || 0) ? u : max, null);
-                      return top
-                        ? <p className="text-lg font-bold text-gray-900 truncate">/{top.short_code} <span className="text-sm font-normal text-gray-500">({top.clicks} clicks)</span></p>
-                        : <p className="text-gray-400">—</p>;
-                    })()}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Links Table */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               {urls.length === 0 ? (
                 <div className="p-12 text-center text-gray-500">
-                  <BarChart2 className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <Link2 className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                   <p className="text-lg font-medium">No links yet</p>
-                  <p className="text-sm text-gray-400 mt-1">Shorten a URL to start tracking analytics</p>
+                  <p className="text-sm text-gray-400 mt-1">Shorten a URL to see it here</p>
                   <button
                     onClick={() => setActiveTab("shorten")}
                     className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
@@ -663,304 +577,54 @@ export default function App() {
                 </div>
               ) : (
                 <div>
-                  {/* Table header */}
                   <div className="hidden sm:grid grid-cols-12 gap-2 px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <div className="col-span-2">Short Link</div>
-                    <div className="col-span-4">Destination</div>
-                    <div className="col-span-3">Performance</div>
-                    <div className="col-span-2 text-center">Clicks</div>
-                    <div className="col-span-1"></div>
+                    <div className="col-span-3">Short Link</div>
+                    <div className="col-span-7">Destination</div>
+                    <div className="col-span-2 text-right">Actions</div>
                   </div>
 
-                  {urls.map((u) => {
-                    const maxClicks = Math.max(...urls.map((x) => x.clicks || 0), 1);
-                    const pct = Math.round(((u.clicks || 0) / maxClicks) * 100);
-                    const isExpanded = expandedLink === u.short_code;
-                    const events = clickEvents[u.short_code] || [];
-                    const isLoading = loadingEvents[u.short_code];
-
-                    // Aggregate referrers
-                    const referrerMap = {};
-                    events.forEach((ev) => {
-                      const label = formatReferrer(ev.referrer);
-                      referrerMap[label] = (referrerMap[label] || 0) + 1;
-                    });
-                    const referrers = Object.entries(referrerMap).sort((a, b) => b[1] - a[1]);
-
-                    return (
-                      <div key={u.short_code} className="border-b border-gray-100 last:border-0">
-                        {/* Main clickable row — mobile: 3 cols, sm+: 12 cols */}
-                        <div
-                          className="flex sm:grid sm:grid-cols-12 gap-2 px-4 sm:px-5 py-4 hover:bg-gray-50 transition-colors cursor-pointer items-center"
-                          onClick={() => {
-                            if (isExpanded) {
-                              setExpandedLink(null);
-                            } else {
-                              setExpandedLink(u.short_code);
-                              if (!clickEvents[u.short_code]) fetchClickEvents(u.short_code);
-                            }
-                          }}
-                        >
-                          {/* Short code */}
-                          <div className="flex-shrink-0 sm:col-span-2">
-                            <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-xs sm:text-sm font-mono">
-                              /{u.short_code}
-                            </span>
-                          </div>
-                          {/* Destination — hidden on mobile, shown sm+ */}
-                          <div className="hidden sm:block sm:col-span-4">
-                            <p className="text-gray-700 text-sm truncate" title={u.original_url}>
-                              {u.original_url}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              Created {new Date(u.created_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                          {/* URL shown on mobile only */}
-                          <div className="flex-1 sm:hidden min-w-0 px-2">
-                            <p className="text-gray-700 text-xs truncate">{u.original_url}</p>
-                            <p className="text-xs text-gray-400">{new Date(u.created_at).toLocaleDateString()}</p>
-                          </div>
-                          {/* Performance bar — sm+ only */}
-                          <div className="hidden sm:block sm:col-span-3 pr-4">
-                            <div className="w-full bg-gray-100 rounded-full h-2">
-                              <div
-                                className="bg-emerald-500 h-2 rounded-full transition-all duration-700"
-                                style={{ width: `${pct}%` }}
-                              />
-                            </div>
-                          </div>
-                          {/* Clicks */}
-                          <div className="flex-shrink-0 sm:col-span-2 sm:text-center">
-                            <span className="inline-flex items-center gap-1 font-bold text-gray-800 text-sm">
-                              <MousePointerClick className="w-4 h-4 text-emerald-500" />
-                              {u.clicks || 0}
-                            </span>
-                          </div>
-                          {/* Chevron */}
-                          <div className="flex-shrink-0 sm:col-span-1 flex justify-end">
-                            {isExpanded
-                              ? <ChevronUp className="w-4 h-4 text-gray-400" />
-                              : <ChevronDown className="w-4 h-4 text-gray-400" />}
-                          </div>
+                  {urls.map((u) => (
+                    <div key={u.short_code} className="border-b border-gray-100 last:border-0">
+                      <div className="flex sm:grid sm:grid-cols-12 gap-2 px-4 sm:px-5 py-4 items-center">
+                        <div className="flex-shrink-0 sm:col-span-3">
+                          <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-xs sm:text-sm font-mono">
+                            /{u.short_code}
+                          </span>
                         </div>
-
-                        {/* Expanded Analytics Panel */}
-                        {isExpanded && (
-                          <div className="bg-gradient-to-br from-gray-50 to-slate-50 border-t border-gray-100 px-5 py-5">
-                            {/* Quick actions */}
-                            <div className="flex flex-wrap gap-2 mb-5">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleCopy(`${window.location.origin}/${u.short_code}`); }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                              >
-                                <Copy className="w-3.5 h-3.5" /> Copy Link
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); simulateRedirect(u.short_code, u.original_url); }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" /> Test Link
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); fetchClickEvents(u.short_code); }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors ml-auto"
-                              >
-                                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} /> Refresh Stats
-                              </button>
-                            </div>
-
-                            {isLoading ? (
-                              <div className="flex items-center justify-center py-8 gap-3 text-gray-400">
-                                <RefreshCw className="w-5 h-5 animate-spin" />
-                                <span className="text-sm">Loading analytics...</span>
-                              </div>
-                            ) : events.length === 0 ? (
-                              <div className="text-center py-8">
-                                <Share2 className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-                                <p className="text-gray-500 font-medium text-sm">No clicks tracked yet</p>
-                                <p className="text-gray-400 text-xs mt-1">Share this link — clicks will appear here automatically</p>
-                              </div>
-                            ) : (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Traffic Sources */}
-                                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                                  <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                                    <Share2 className="w-4 h-4 text-gray-400" />
-                                    Traffic Sources
-                                    <span className="ml-auto text-xs font-normal text-gray-400">{events.length} total</span>
-                                  </h4>
-                                  <div className="space-y-3">
-                                    {referrers.slice(0, 6).map(([label, count]) => (
-                                      <div key={label}>
-                                        <div className="flex justify-between items-center text-xs mb-1.5">
-                                          <div className="flex items-center gap-2">
-                                            <span className={`w-2 h-2 rounded-full ${getReferrerColor(label)}`} />
-                                            <span className="text-gray-700 font-medium">{label}</span>
-                                          </div>
-                                          <span className="text-gray-500">{count} click{count !== 1 ? "s" : ""} ({Math.round((count / events.length) * 100)}%)</span>
-                                        </div>
-                                        <div className="w-full bg-gray-100 rounded-full h-1.5">
-                                          <div
-                                            className={`h-1.5 rounded-full transition-all duration-500 ${getReferrerColor(label)}`}
-                                            style={{ width: `${(count / events.length) * 100}%` }}
-                                          />
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                {/* Recent Clicks */}
-                                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                                  <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                                    <Clock className="w-4 h-4 text-gray-400" />
-                                    Recent Clicks
-                                    <span className="ml-auto text-xs font-normal text-gray-400">latest {Math.min(events.length, 8)}</span>
-                                  </h4>
-                                  <div className="space-y-2.5">
-                                    {events.slice(0, 8).map((ev, idx) => {
-                                      const label = formatReferrer(ev.referrer);
-                                      return (
-                                        <div key={ev.id || idx} className="flex items-center justify-between gap-2">
-                                          <div className="flex items-center gap-2 min-w-0">
-                                            <span className={`flex-shrink-0 w-2 h-2 rounded-full ${getReferrerColor(label)}`} />
-                                            <span className="text-xs text-gray-500 truncate">
-                                              {new Date(ev.clicked_at).toLocaleString("en-IN", {
-                                                month: "short", day: "numeric",
-                                                hour: "2-digit", minute: "2-digit"
-                                              })}
-                                            </span>
-                                          </div>
-                                          <span className={`flex-shrink-0 text-xs font-semibold text-white px-2 py-0.5 rounded-full ${getReferrerColor(label)}`}>
-                                            {label}
-                                          </span>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                        <div className="hidden sm:block sm:col-span-7">
+                          <p className="text-gray-700 text-sm truncate" title={u.original_url}>
+                            {u.original_url}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            Created {new Date(u.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex-1 sm:hidden min-w-0 px-2">
+                          <p className="text-gray-700 text-xs truncate">{u.original_url}</p>
+                          <p className="text-xs text-gray-400">{new Date(u.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex-shrink-0 sm:col-span-2 flex justify-end gap-2">
+                          <button
+                            onClick={() => handleCopy(`${window.location.origin}/${u.short_code}`)}
+                            className="p-2 text-gray-500 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="Copy Link"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => window.open(u.original_url, "_blank")}
+                            className="p-2 text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+                            title="Test Link"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
-
-            {/* Setup Note */}
-            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm">
-              <p className="font-semibold text-amber-800 mb-1">📋 Supabase Setup Required for Analytics</p>
-              <p className="text-amber-700">Run this SQL in your Supabase SQL Editor to enable detailed click tracking:</p>
-              <pre className="mt-2 text-xs bg-white border border-amber-100 rounded-lg p-3 overflow-x-auto text-gray-700">{`CREATE TABLE IF NOT EXISTS click_events (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  short_code TEXT NOT NULL,
-  clicked_at TIMESTAMPTZ DEFAULT NOW(),
-  referrer TEXT,
-  user_agent TEXT
-);
-ALTER TABLE click_events ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow insert" ON click_events FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow select" ON click_events FOR SELECT USING (true);`}</pre>
-            </div>
-          </div>
-        )}
-
-        {/* TAB: UNSHORTEN */}
-        {activeTab === "unshorten" && (
-          <div className="animate-in fade-in duration-300 max-w-2xl mx-auto">
-            <div className="text-center mb-10">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                Unshorten URL
-              </h2>
-              <p className="text-gray-600">
-                Find out where a short link really goes before clicking it.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-lg p-2 mb-8 border border-gray-100">
-              <form
-                onSubmit={handleLookup}
-                className="flex flex-col sm:flex-row gap-2"
-              >
-                <input
-                  type="text"
-                  placeholder="Paste short URL or code (e.g. aB3x9)"
-                  className="flex-1 px-6 py-4 text-lg border-2 border-transparent bg-gray-50 focus:bg-white focus:border-emerald-500 rounded-lg outline-none transition-all"
-                  value={lookupCode}
-                  onChange={(e) => setLookupCode(e.target.value)}
-                />
-                <button
-                  type="submit"
-                  disabled={!supabase}
-                  className="bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 px-8 rounded-lg transition-colors flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-70"
-                >
-                  <Search className="w-5 h-5" />
-                  Look Up
-                </button>
-              </form>
-              {lookupError && (
-                <p className="text-red-500 text-sm mt-3 px-4 font-medium">
-                  {lookupError}
-                </p>
-              )}
-            </div>
-
-            {lookupResult && (
-              <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm text-left">
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="bg-emerald-100 p-3 rounded-full">
-                    <ShieldCheck className="w-6 h-6 text-emerald-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-800">
-                      Destination Found in Supabase
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      This link is registered in your database.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
-                  <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                      Original URL (Destination)
-                    </p>
-                    <a
-                      href={lookupResult.original_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-emerald-600 font-medium hover:underline break-all"
-                    >
-                      {lookupResult.original_url}
-                    </a>
-                  </div>
-                  <div className="pt-4 border-t border-gray-200 grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                        Short Code
-                      </p>
-                      <p className="font-medium text-gray-800">
-                        {lookupResult.short_code}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                        Total Clicks
-                      </p>
-                      <p className="font-medium text-gray-800 flex items-center gap-1">
-                        <MousePointerClick className="w-4 h-4 text-gray-400" />
-                        {lookupResult.clicks}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </main>
